@@ -1,41 +1,39 @@
-use std::{fs::read_to_string, str::FromStr};
-use regex::Regex;
+use std::fs::read_to_string;
 
 const DIGIT_NAMES: [&str; 10] = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
-fn parse_digit(s: &str) -> Result<i32, <i32 as FromStr>::Err> {
-    for i in 0..10 {
-        if s == DIGIT_NAMES[i] {
-            return Ok(i.try_into().unwrap());
+fn find_first_digit(s: &str) -> Option<(u32, usize)> {
+    for i in 0..s.len() {
+        let c = s.chars().nth(i).unwrap();
+        if c.is_numeric() {
+            return Some((c.to_digit(10).unwrap(), i));
+        }
+
+        for n in 0..10 {
+            if s[i..].starts_with(DIGIT_NAMES[n]) {
+                return Some((n.try_into().unwrap(), i));
+            }
         }
     }
 
-    s.parse::<i32>()
+    None
 }
 
 fn main() {
-    let digit_regex = "[0-9]|".to_owned() + &DIGIT_NAMES.join("|");
-    let digit_regex = Regex::new(&digit_regex).unwrap();
-
     let mut sum = 0;
 
     for line in read_to_string("input.txt").unwrap().lines() {
-        let mut digits = digit_regex.find_iter(line);
-        
-        let first_digit = digits.next().unwrap();
-        let last_digit = digits.last().or(Some(first_digit)).unwrap();
+        let (first_digit, mut i) = find_first_digit(line).unwrap();
+        let mut last_digit = first_digit;
 
-        let first_digit = first_digit.as_str();
-        let last_digit = last_digit.as_str();
+        while let Some((next_digit, next_i)) = find_first_digit(&line[i+1..]) {
+            last_digit = next_digit;
+            i += next_i + 1;
+        }
 
         println!("{line} => {first_digit}, {last_digit}");
 
-        let first_digit = parse_digit(first_digit).unwrap();
-        let last_digit = parse_digit(last_digit).unwrap();
         let n = first_digit * 10 + last_digit;
-
-        println!("{n}");
-
         sum += n;
     }
 
